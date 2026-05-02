@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f1117">
+<title>RotaFácil — Entregador</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1f2436;
+    --accent: #00e5a0;
+    --accent2: #7c5cfc;
+    --warn: #ff6b35;
+    --text: #f0f2f8;
+    --muted: #7a82a0;
+    --border: rgba(255,255,255,0.07);
+    --radius: 16px;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,229,160,0.07) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15,17,23,0.92);
+    backdrop-filter: blur(12px);
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { font-family: var(--font-head); font-size: 1.3rem; font-weight: 800; }
+  .logo span { color: var(--accent); }
+  .pkg-count {
+    background: var(--accent); color: #000;
+    font-size: 0.72rem; font-weight: 700;
+    padding: 4px 10px; border-radius: 99px;
+    font-family: var(--font-head);
+  }
+
+  /* NAV TABS */
+  .tabs {
+    display: flex; gap: 4px;
+    padding: 12px 16px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky; top: 57px; z-index: 99;
+  }
+  .tab {
+    flex: 1; padding: 10px 4px;
+    text-align: center;
+    font-size: 0.78rem; font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-family: var(--font-head);
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* SCREENS */
+  .screen { display: none; padding: 20px 16px 100px; }
+  .screen.active { display: block; }
+
+  /* SCAN SCREEN */
+  .scan-hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .camera-area {
+    width: 100%; height: 220px;
+    background: #0a0c12;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  #videoEl {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; display: none;
+  }
+  .camera-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .scan-frame {
+    width: 240px; height: 140px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .scan-line {
+    position: absolute; left: 0; right: 0;
+    height: 2px; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: scanAnim 2s ease-in-out infinite;
+    top: 0;
+  }
+  @keyframes scanAnim {
+    0%,100% { top: 0; } 50% { top: calc(100% - 2px); }
+  }
+  .cam-placeholder { font-size: 2.5rem; opacity: 0.3; z-index: 1; }
+  .cam-hint { font-size: 0.75rem; color: var(--muted); z-index: 1; }
+
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px;
+    border: none; border-radius: var(--radius);
+    font-family: var(--font-head); font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:active { transform: scale(0.97); }
+  .btn-danger { background: rgba(255,107,53,0.15); color: var(--warn); border: 1px solid rgba(255,107,53,0.3); }
+
+  .scan-actions { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* AI STATUS */
+  .ai-status {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+  .ai-dot.loading { background: var(--warn); }
+  .ai-text { font-size: 0.78rem; color: var(--muted); }
+  .ai-text strong { color: var(--text); display: block; font-size: 0.82rem; }
+
+  /* MANUAL INPUT */
+  .input-group { margin-bottom: 12px; }
+  .input-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  .input-group input, .input-group textarea {
+    width: 100%; padding: 13px 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text);
+    font-family: var(--font-body); font-size: 0.9rem;
+    outline: none; transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .input-group input:focus, .input-group textarea:focus { border-color: var(--accent); }
+  .input-group textarea { min-height: 80px; resize: none; }
+
+  /* PACKAGE LIST */
+  .section-title {
+    font-family: var(--font-head); font-size: 0.85rem; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+  .pkg-list { display: flex; flex-direction: column; gap: 10px; }
+  .pkg-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px;
+    display: flex; align-items: flex-start; gap: 12px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+  .pkg-num {
+    min-width: 28px; height: 28px; border-radius: 8px;
+    background: var(--surface2); display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-head); font-size: 0.8rem; font-weight: 800; color: var(--accent);
+  }
+  .pkg-info { flex: 1; min-width: 0; }
+  .pkg-name { font-weight: 500; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pkg-addr { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .pkg-source { font-size: 0.68rem; color: var(--accent2); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+  .pkg-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: none;
+    background: var(--surface2); color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { color: var(--warn); background: rgba(255,107,53,0.1); }
+  .pkg-status {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.68rem; padding: 2px 8px; border-radius: 99px;
+    font-weight: 600; margin-top: 4px;
+  }
+  .status-pending { background: rgba(255,107,53,0.12); color: var(--warn); }
+  .status-done { background: rgba(0,229,160,0.12); color: var(--accent); }
+  .status-next { background: rgba(124,92,252,0.15); color: var(--accent2); }
+
+  /* ROUTE SCREEN */
+  .route-summary {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    text-align: center;
+  }
+  .stat-value { font-family: var(--font-head); font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  .map-placeholder {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); height: 200px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+    margin-bottom: 16px; position: relative; overflow: hidden;
+  }
+  .map-grid {
+    position: absolute; inset: 0; opacity: 0.08;
+    background-image: linear-gradient(var(--accent) 1px, transparent 1px), linear-gradient(90deg, var(--accent) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  .map-label { font-family: var(--font-head); font-size: 0.85rem; font-weight: 700; color: var(--muted); z-index: 1; }
+  .map-sub { font-size: 0.75rem; color: var(--muted); opacity: 0.6; z-index: 1; }
+
+  .route-list { display: flex; flex-direction: column; gap: 0; }
+  .route-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .route-item:last-child { border-bottom: none; }
+  .step-indicator {
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    min-width: 28px;
+  }
+  .step-circle {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-head); font-size: 0.75rem; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .step-circle.pending { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .step-circle.next { background: var(--accent2); color: #fff; }
+  .step-circle.done { background: rgba(0,229,160,0.15); color: var(--accent); border: 1px solid var(--accent); }
+  .step-line { width: 1px; flex: 1; background: var(--border); min-height: 20px; margin-top: 4px; }
+  .route-item:last-child .step-line { display: none; }
+  .route-info { flex: 1; padding-top: 4px; }
+  .route-addr { font-size: 0.88rem; font-weight: 500; }
+  .route-meta { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+  .route-actions { display: flex; flex-direction: column; gap: 6px; padding-top: 2px; align-items: flex-end; }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+  .empty-title { font-family: var(--font-head); font-weight: 700; margin-bottom: 6px; color: var(--text); opacity: 0.5; }
+  .empty-sub { font-size: 0.82rem; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 12px 20px; border-radius: 99px;
+    font-size: 0.82rem; font-weight: 500;
+    opacity: 0; transition: all 0.3s; pointer-events: none;
+    white-space: nowrap; z-index: 999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(0,229,160,0.4); }
+  .toast.error { border-color: rgba(255,107,53,0.4); }
+
+  /* FAB */
+  .fab {
+    position: fixed; bottom: 24px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); color: #000;
+    border: none; font-size: 1.4rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(0,229,160,0.4);
+    transition: transform 0.2s;
+    z-index: 200;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: rgba(15,17,23,0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    display: flex; z-index: 150;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    padding: 10px 0 14px;
+    cursor: pointer; transition: color 0.2s;
+    color: var(--muted); font-size: 0.65rem; font-weight: 500;
+    font-family: var(--font-head);
+  }
+  .nav-item .nav-icon { font-size: 1.3rem; }
+  .nav-item.active { color: var(--accent); }
+
+  /* MODAL */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 500; display: none; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    padding: 20px 20px 40px; width: 100%; max-width: 430px;
+    border-top: 1px solid var(--border);
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 99px; margin: 0 auto 20px; }
+  .modal-title { font-family: var(--font-head); font-size: 1.1rem; font-weight: 800; margin-bottom: 16px; }
+
+  /* Loading spinner */
+  .spinner {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  input[type=file] { display: none; }
+
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.68rem; padding: 3px 8px; border-radius: 6px;
+    font-weight: 600;
+  }
+  .badge-ai { background: rgba(124,92,252,0.15); color: var(--accent2); }
+  .badge-manual { background: rgba(120,130,160,0.12); color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Rota<span>Fácil</span></div>
+  <div class="pkg-count" id="pkgCountBadge">0 pacotes</div>
+</header>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="showScreen('scan')" id="nav-scan">
+    <div class="nav-icon">📷</div>
+    <span>Escanear</span>
+  </div>
+  <div class="nav-item" onclick="showScreen('packages')" id="nav-packages">
+    <div class="nav-icon">📦</div>
+    <span>Pacotes</span>
+  </div>
+  <div class="nav-item" onclick="showScreen('route')" id="nav-route">
+    <div class="nav-icon">🗺️</div>
+    <span>Rota</span>
+  </div>
+</nav>
+
+<!-- SCREEN: ESCANEAR -->
+<div class="screen active" id="screen-scan">
+  <div class="scan-hero">
+    <div class="camera-area" id="cameraArea">
+      <video id="videoEl" autoplay playsinline muted></video>
+      <canvas id="canvasEl" style="display:none"></canvas>
+      <div class="camera-overlay" id="cameraOverlay">
+        <div id="camPlaceholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <div class="cam-placeholder">📷</div>
+          <div class="cam-hint">Câmera inativa</div>
+        </div>
+        <div id="scanFrame" class="scan-frame" style="display:none">
+          <div class="scan-line"></div>
+        </div>
+      </div>
+    </div>
+    <div class="scan-actions">
+      <button class="btn btn-primary" id="btnCamera" onclick="toggleCamera()">
+        <span>📷</span> Abrir Câmera
+      </button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+        <span>🖼️</span> Importar Foto da Nota
+      </button>
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFileImport(this)">
+    </div>
+  </div>
+
+  <div class="ai-status" id="aiStatus">
+    <div class="ai-dot" id="aiDot"></div>
+    <div class="ai-text">
+      <strong id="aiStatusTitle">IA Pronta</strong>
+      <span id="aiStatusSub">Aponte para uma nota fiscal para extrair o endereço</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">Adicionar manualmente</div>
+  <div class="input-group">
+    <label>Nome / Destinatário</label>
+    <input type="text" id="manualName" placeholder="Ex: João Silva" />
+  </div>
+  <div class="input-group">
+    <label>Endereço completo</label>
+    <textarea id="manualAddr" placeholder="Ex: Rua das Flores, 123, Curitiba - PR"></textarea>
+  </div>
+  <button class="btn btn-secondary" onclick="addManual()" style="margin-top:4px">
+    ➕ Adicionar Endereço
+  </button>
+</div>
+
+<!-- SCREEN: PACOTES -->
+<div class="screen" id="screen-packages">
+  <div class="section-title">Todos os pacotes</div>
+  <div class="pkg-list" id="pkgList"></div>
+</div>
+
+<!-- SCREEN: ROTA -->
+<div class="screen" id="screen-route">
+  <div class="route-summary">
+    <div class="stat-card">
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-label">Entregas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statDone">0</div>
+      <div class="stat-label">Concluídas</div>
+    </div>
+  </div>
+
+  <div class="map-placeholder" id="mapArea">
+    <div class="map-grid"></div>
+    <div class="map-label" id="mapLabel">🗺️ Rota não gerada</div>
+    <div class="map-sub" id="mapSub">Adicione pacotes e gere a rota</div>
+  </div>
+
+  <button class="btn btn-primary" onclick="generateRoute()" style="margin-bottom:16px">
+    ⚡ Gerar Rota Otimizada
+  </button>
+
+  <div class="section-title">Sequência de entregas</div>
+  <div class="route-list" id="routeList"></div>
+</div>
+
+<!-- MODAL: Endereço detectado pela IA -->
+<div class="modal-backdrop" id="modalDetected">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🤖 Endereço detectado</div>
+    <div class="badge badge-ai" style="margin-bottom:14px">✨ Extraído por IA</div>
+    <div class="input-group">
+      <label>Destinatário</label>
+      <input type="text" id="detectedName" />
+    </div>
+    <div class="input-group">
+      <label>Endereço</label>
+      <textarea id="detectedAddr" style="min-height:70px"></textarea>
+    </div>
+    <div class="input-group">
+      <label>Origem</label>
+      <input type="text" id="detectedSource" readonly style="color:var(--muted)"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal()">✕ Descartar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="confirmDetected()">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =========================================
+// STATE
+// =========================================
+let packages = [];
+let routeOrder = [];
+let stream = null;
+let capturing = false;
+let captureInterval = null;
+let pendingPackage = null;
+
+// =========================================
+// SAFE JSON PARSER
+// Handles: raw JSON, ```json fences, JSON buried in text
+// =========================================
+function safeParseJSON(text) {
+  if (!text) return null;
+  try { return JSON.parse(text); } catch(_) {}
+  const stripped = text.replace(/```(?:json)?/gi, '').trim();
+  try { return JSON.parse(stripped); } catch(_) {}
+  const match = stripped.match(/\{[\s\S]*\}/);
+  if (match) { try { return JSON.parse(match[0]); } catch(_) {} }
+  return null;
+}
+
+// =========================================
+// NAVIGATION
+// =========================================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name !== 'scan' && stream) stopCamera();
+  if (name === 'packages') renderPackages();
+  if (name === 'route') renderRoute();
+}
+
+// =========================================
+// CAMERA
+// =========================================
+async function toggleCamera() {
+  if (stream) { stopCamera(); return; }
+  const btn = document.getElementById('btnCamera');
+  btn.innerHTML = '<div class="spinner"></div> Iniciando...';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('videoEl');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('camPlaceholder').style.display = 'none';
+    document.getElementById('scanFrame').style.display = 'block';
+    btn.innerHTML = '⏹️ Parar Câmera';
+    btn.classList.replace('btn-primary', 'btn-danger');
+    setAiStatus('scanning', 'Analisando nota fiscal...', 'Posicione a nota dentro do quadro');
+    startCapturing();
+  } catch(e) {
+    btn.innerHTML = '📷 Abrir Câmera';
+    showToast('Câmera não disponível — use "Importar Foto"', 'error');
+    setAiStatus('ready', 'IA Pronta', 'Use importar foto para testar a extração');
+  }
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  document.getElementById('videoEl').style.display = 'none';
+  document.getElementById('camPlaceholder').style.display = 'flex';
+  document.getElementById('scanFrame').style.display = 'none';
+  document.getElementById('btnCamera').innerHTML = '📷 Abrir Câmera';
+  document.getElementById('btnCamera').classList.replace('btn-danger', 'btn-primary');
+  if (captureInterval) { clearInterval(captureInterval); captureInterval = null; }
+  setAiStatus('ready', 'IA Pronta', 'Aponte para uma nota fiscal para extrair o endereço');
+}
+
+function startCapturing() {
+  if (captureInterval) clearInterval(captureInterval);
+  captureInterval = setInterval(captureFrame, 5000);
+}
+
+function captureFrame() {
+  if (!stream || capturing) return;
+  capturing = true;
+  const video = document.getElementById('videoEl');
+  const canvas = document.getElementById('canvasEl');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const imageData = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+  extractAddressFromImage(imageData, 'image/jpeg').finally(() => { capturing = false; });
+}
+
+// =========================================
+// FILE IMPORT
+// =========================================
+function handleFileImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    const base64 = dataUrl.split(',')[1];
+    const mediaType = file.type || 'image/jpeg';
+    await extractAddressFromImage(base64, mediaType);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// =========================================
+// AI EXTRACTION (Claude API)
+// =========================================
+async function extractAddressFromImage(base64, mediaType) {
+  const imgType = mediaType || 'image/jpeg';
+  setAiStatus('loading', 'IA Processando...', 'Analisando etiqueta...');
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: imgType, data: base64 }
+            },
+            {
+              type: 'text',
+              text: `Você é um especialista em leitura de etiquetas de entrega brasileiras.
+
+TAREFA: Leia esta etiqueta e extraia o endereço do DESTINATÁRIO (quem vai RECEBER o pacote).
+
+Procure pela seção "DESTINATÁRIO" e leia: nome, rua, número, bairro, cidade, estado e CEP.
+Ignore a seção "REMETENTE" (quem enviou).
+Mesmo que a imagem esteja parcialmente cortada, extraia o máximo possível.
+
+Responda APENAS este JSON sem nenhum texto antes ou depois:
+{"found":true,"destinatario":"nome completo","endereco":"endereço completo com CEP","origem":"Shopee ou Mercado Livre ou outra loja detectada"}
+
+Se realmente não houver etiqueta legível na imagem:
+{"found":false}`
+            }
+          ]
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.map(c => c.text || '').join('') || '';
+    const parsed = safeParseJSON(text);
+    if (!parsed) {
+      setAiStatus('ready', 'IA Pronta', 'Nenhum endereço detectado — tente outra imagem');
+      return;
+    }
+    if (parsed.found) {
+      stopCamera();
+      pendingPackage = parsed;
+      document.getElementById('detectedName').value = parsed.destinatario || '';
+      document.getElementById('detectedAddr').value = parsed.endereco || '';
+      document.getElementById('detectedSource').value = parsed.origem || 'Desconhecida';
+      document.getElementById('modalDetected').classList.add('open');
+      setAiStatus('ready', 'Endereço encontrado!', 'Confirme os dados detectados');
+    } else {
+      setAiStatus('ready', 'IA Pronta', 'Nenhum endereço detectado — tente outra imagem');
+    }
+  } catch(e) {
+    console.error(e);
+    setAiStatus('ready', 'Erro na extração', 'Adicione o endereço manualmente');
+    showToast('Erro ao processar imagem — adicione manualmente', 'error');
+  }
+}
+
+function confirmDetected() {
+  const name = document.getElementById('detectedName').value.trim();
+  const addr = document.getElementById('detectedAddr').value.trim();
+  const src = document.getElementById('detectedSource').value.trim();
+  if (!addr) { showToast('Preencha o endereço', 'error'); return; }
+  addPackage(name || 'Destinatário', addr, src, 'ai');
+  closeModal();
+}
+
+function closeModal() {
+  document.getElementById('modalDetected').classList.remove('open');
+  pendingPackage = null;
+}
+
+// =========================================
+// MANUAL ADD
+// =========================================
+function addManual() {
+  const name = document.getElementById('manualName').value.trim();
+  const addr = document.getElementById('manualAddr').value.trim();
+  if (!addr) { showToast('Digite o endereço', 'error'); return; }
+  addPackage(name || 'Destinatário', addr, 'Manual', 'manual');
+  document.getElementById('manualName').value = '';
+  document.getElementById('manualAddr').value = '';
+}
+
+// =========================================
+// PACKAGE MANAGEMENT
+// =========================================
+function addPackage(name, addr, source, method) {
+  const pkg = {
+    id: Date.now(),
+    name, addr, source, method,
+    status: 'pending',
+    lat: null, lng: null
+  };
+  packages.push(pkg);
+  routeOrder = [];
+  updateBadge();
+  showToast('✅ Pacote adicionado!', 'success');
+  renderPackages();
+}
+
+function removePackage(id) {
+  packages = packages.filter(p => p.id !== id);
+  routeOrder = packages.map((_, i) => i);
+  updateBadge();
+  renderPackages();
+  showToast('Pacote removido');
+}
+
+function markDone(id) {
+  const p = packages.find(p => p.id === id);
+  if (p) { p.status = p.status === 'done' ? 'pending' : 'done'; }
+  renderPackages();
+  renderRoute();
+  updateBadge();
+}
+
+function updateBadge() {
+  const badge = document.getElementById('pkgCountBadge');
+  badge.textContent = packages.length + (packages.length === 1 ? ' pacote' : ' pacotes');
+}
+
+function renderPackages() {
+  const list = document.getElementById('pkgList');
+  if (!packages.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Nenhum pacote ainda</div><div class="empty-sub">Escaneie uma nota ou adicione manualmente</div></div>`;
+    return;
+  }
+  list.innerHTML = packages.map((p, i) => {
+    const statusLabel = p.status === 'done'
+      ? '<span class="pkg-status status-done">✓ Entregue</span>'
+      : '<span class="pkg-status status-pending">● Pendente</span>';
+    const badgeClass = p.method === 'ai' ? 'badge-ai' : 'badge-manual';
+    const badgeLabel = p.method === 'ai' ? '✨ IA' : '✎ Manual';
+    return `<div class="pkg-card">
+      <div class="pkg-num">${i + 1}</div>
+      <div class="pkg-info">
+        <div class="pkg-name">${p.name}</div>
+        <div class="pkg-addr">${p.addr}</div>
+        <div class="pkg-source"><span class="badge ${badgeClass}">${badgeLabel}</span> ${p.source}</div>
+        ${statusLabel}
+      </div>
+      <div class="pkg-actions">
+        <button class="icon-btn" title="${p.status === 'done' ? 'Desmarcar' : 'Marcar entregue'}" onclick="markDone(${p.id})">${p.status === 'done' ? '↺' : '✓'}</button>
+        <button class="icon-btn" title="Remover" onclick="removePackage(${p.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// =========================================
+// ROUTE OPTIMIZATION (via IA)
+// =========================================
+async function generateRoute() {
+  if (!packages.length) { showToast('Adicione pacotes primeiro', 'error'); return; }
+  const btn = document.querySelector('#screen-route .btn-primary');
+  btn.innerHTML = '<div class="spinner"></div> Otimizando rota...';
+  btn.disabled = true;
+  setMapStatus('Calculando rota otimizada...', 'IA analisando endereços e distâncias');
+  try {
+    const addrList = packages.map((p, i) => `${i + 1}. ${p.name} — ${p.addr}`).join('\n');
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Você é um sistema de otimização de rotas para entregas em Curitiba, PR, Brasil.
+
+Estes são os endereços para entrega (numerados):
+${addrList}
+
+Considere a localização geográfica real de cada endereço e organize a sequência de entrega mais eficiente, minimizando distância percorrida. Considere bairros, zonas da cidade e lógica geográfica.
+
+Responda SOMENTE em JSON válido:
+{
+  "ordem": [1, 3, 2, ...],
+  "distancia_estimada": "12 km",
+  "tempo_estimado": "45 min",
+  "dica": "Uma dica curta de rota em português"
+}`
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.map(c => c.text || '').join('') || '';
+    const result = safeParseJSON(text) || {};
+    routeOrder = (result.ordem || packages.map((_, i) => i + 1)).map(n => n - 1);
+    setMapStatus(
+      `📍 ${result.distancia_estimada || '--'} · ⏱ ${result.tempo_estimado || '--'}`,
+      result.dica || 'Rota otimizada pela IA'
+    );
+    showToast('✅ Rota otimizada!', 'success');
+    renderRoute();
+    // Open maps with first address
+    if (packages.length > 0) {
+      const first = packages[routeOrder[0]];
+      const q = encodeURIComponent(first.addr);
+      document.getElementById('mapArea').onclick = () => window.open(`https://maps.google.com?q=${q}`, '_blank');
+      document.getElementById('mapArea').style.cursor = 'pointer';
+      setMapStatus(
+        `📍 ${result.distancia_estimada || '--'} · ⏱ ${result.tempo_estimado || '--'}`,
+        '🔗 Toque para abrir no Google Maps'
+      );
+    }
+  } catch(e) {
+    console.error(e);
+    routeOrder = packages.map((_, i) => i);
+    showToast('Rota gerada sem otimização', 'error');
+    renderRoute();
+    setMapStatus('Rota gerada', 'Sem otimização — verifique conexão');
+  } finally {
+    btn.innerHTML = '⚡ Gerar Rota Otimizada';
+    btn.disabled = false;
+  }
+}
+
+function renderRoute() {
+  const list = document.getElementById('routeList');
+  document.getElementById('statTotal').textContent = packages.length;
+  document.getElementById('statDone').textContent = packages.filter(p => p.status === 'done').length;
+  if (!packages.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🗺️</div><div class="empty-title">Rota não calculada</div><div class="empty-sub">Adicione pacotes e clique em Gerar Rota</div></div>`;
+    return;
+  }
+  const order = (routeOrder.length === packages.length) ? routeOrder : packages.map((_, i) => i);
+  const firstPending = order.findIndex(idx => packages[idx]?.status !== 'done');
+  list.innerHTML = order.map((idx, step) => {
+    const p = packages[idx];
+    if (!p) return '';
+    const isNext = step === firstPending;
+    const circleClass = p.status === 'done' ? 'done' : isNext ? 'next' : 'pending';
+    const circleContent = p.status === 'done' ? '✓' : step + 1;
+    const nextBadge = (isNext && p.status !== 'done') ? '<span class="pkg-status status-next">▶ Próxima entrega</span>' : '';
+    const mapsAddr = encodeURIComponent(p.addr);
+    return `<div class="route-item">
+      <div class="step-indicator">
+        <div class="step-circle ${circleClass}">${circleContent}</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="route-info">
+        <div class="route-addr">${p.name}</div>
+        <div class="route-meta">${p.addr}</div>
+        ${nextBadge}
+      </div>
+      <div class="route-actions">
+        <button class="icon-btn" style="font-size:1rem" onclick="openMaps('${mapsAddr}')" title="Navegar">🧭</button>
+        <button class="icon-btn" onclick="markDone(${p.id})" title="${p.status === 'done' ? 'Desfazer' : 'Concluir'}">${p.status === 'done' ? '↺' : '✓'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openMaps(addr) {
+  window.open(`https://maps.google.com?q=${addr}`, '_blank');
+}
+
+// =========================================
+// UI HELPERS
+// =========================================
+function setAiStatus(state, title, sub) {
+  const dot = document.getElementById('aiDot');
+  document.getElementById('aiStatusTitle').textContent = title;
+  document.getElementById('aiStatusSub').textContent = sub;
+  dot.className = 'ai-dot' + (state === 'loading' ? ' loading' : '');
+}
+
+function setMapStatus(label, sub) {
+  document.getElementById('mapLabel').textContent = label;
+  document.getElementById('mapSub').textContent = sub;
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(() => { t.className = 'toast'; }, 2800);
+}
+
+// Close modal on backdrop click
+document.getElementById('modalDetected').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Initialize empty states on load
+renderPackages();
+renderRoute();
+</script>
+</body>
+</html>
